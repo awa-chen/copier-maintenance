@@ -1,35 +1,26 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Login -->
     <Login v-if="!store.isLoggedIn" />
-
-    <!-- Main App -->
     <div v-else class="flex">
-      <!-- Sidebar -->
       <aside class="w-60 bg-sidebar text-white min-h-screen fixed left-0 top-0 overflow-y-auto flex flex-col" style="background:#1a2332">
         <div class="px-4 py-4 border-b border-white/10 flex items-center gap-3">
           <div class="text-2xl">🖨️</div>
           <div>
             <div class="font-bold text-sm">复印机运维</div>
-            <div class="text-xs text-white/40">维修服务系统 v3.0</div>
+            <div class="text-xs text-white/40">维修服务系统 v3.1</div>
           </div>
         </div>
-
         <nav class="flex-1 py-2">
           <router-link
-            v-for="item in visibleNavItems"
-            :key="item.path"
-            :to="item.path"
+            v-for="item in visibleNavItems" :key="item.path" :to="item.path"
             class="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
             :class="isActive(item.path)
               ? 'bg-white/10 text-white border-l-4 border-blue-500 bg-blue-600/20'
-              : 'text-white/60 hover:bg-white/5 hover:text-white border-l-4 border-transparent'"
-          >
+              : 'text-white/60 hover:bg-white/5 hover:text-white border-l-4 border-transparent'">
             <span class="text-base">{{ item.icon }}</span>
             {{ item.label }}
           </router-link>
         </nav>
-
         <div class="p-4 border-t border-white/10">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">{{ store.user.avatar }}</div>
@@ -41,10 +32,7 @@
           </div>
         </div>
       </aside>
-
-      <!-- Main Content -->
       <div class="flex-1 ml-60">
-        <!-- Topbar -->
         <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-40 shadow-sm">
           <div class="text-sm text-gray-500">
             <span class="text-blue-600 font-medium">{{ currentPageName }}</span>
@@ -59,8 +47,6 @@
             </router-link>
           </div>
         </header>
-
-        <!-- Page Content -->
         <main class="p-6">
           <router-view />
         </main>
@@ -69,12 +55,9 @@
 
     <!-- Toast -->
     <div class="fixed top-4 right-4 z-50 flex flex-col gap-2">
-      <div
-        v-for="t in toasts"
-        :key="t.id"
+      <div v-for="t in toasts" :key="t.id"
         :class="['px-4 py-3 rounded-lg text-white text-sm font-medium shadow-lg flex items-center gap-2 animate-slide-in',
-          t.type === 'success' ? 'bg-green-500' : t.type === 'error' ? 'bg-red-500' : 'bg-blue-500']"
-      >
+          t.type === 'success' ? 'bg-green-500' : t.type === 'error' ? 'bg-red-500' : 'bg-blue-500']">
         {{ t.type === 'success' ? '✅' : t.type === 'error' ? '❌' : 'ℹ️' }}
         {{ t.msg }}
       </div>
@@ -87,7 +70,8 @@
         <button @click="showNotifPanel=false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
       </div>
       <div class="max-h-80 overflow-y-auto">
-        <div v-for="n in notifs" :key="n.id" :class="['px-4 py-3 border-b border-gray-50 hover:bg-blue-50/50 transition cursor-pointer', !n.read ? 'bg-blue-50/30' : '']"
+        <div v-for="n in notifs" :key="n.id"
+          :class="['px-4 py-3 border-b border-gray-50 hover:bg-blue-50/50 transition cursor-pointer', !n.read ? 'bg-blue-50/30' : '']"
           @click="n.read=true">
           <div class="flex items-start gap-2">
             <div :class="['w-2 h-2 rounded-full mt-1.5 flex-shrink-0', n.type === 'danger' ? 'bg-red-500' : n.type === 'warn' ? 'bg-orange-400' : 'bg-blue-500']"></div>
@@ -121,12 +105,12 @@ const navItems = [
   { path: '/dashboard', label: '数据看板', icon: '📊' },
   { path: '/orders', label: '工单管理', icon: '📋' },
   { path: '/inspections', label: '巡检管理', icon: '🔍' },
+  { path: '/devices', label: '设备管理', icon: '🖨️', adminOnly: true },
+  { path: '/parts', label: '配件管理', icon: '🔧', adminOnly: true },
+  { path: '/customers', label: '客户管理', icon: '👥', adminOnly: true },
   { path: '/contracts', label: '合同管理', icon: '📄' },
   { path: '/settlements', label: '结算管理', icon: '💰' },
   { path: '/statistics', label: '数据统计', icon: '📈' },
-  { path: '/devices', label: '设备管理', icon: '🖨️', adminOnly: true },
-  { path: '/customers', label: '客户管理', icon: '👥', adminOnly: true },
-  { path: '/parts', label: '配件管理', icon: '🔧', adminOnly: true },
   { path: '/technicians', label: '账号管理', icon: '👤', adminOnly: true },
   { path: '/profile', label: '个人信息', icon: '⚙️' },
 ]
@@ -144,16 +128,14 @@ const visibleNavItems = computed(() => {
 
 const pageNames = {
   '/dashboard': '数据看板', '/orders': '工单管理', '/inspections': '巡检管理',
+  '/devices': '设备管理', '/parts': '配件管理', '/customers': '客户管理',
   '/contracts': '合同管理', '/settlements': '结算管理', '/statistics': '数据统计',
-  '/devices': '设备管理', '/customers': '客户管理', '/parts': '配件管理', '/technicians': '账号管理', '/profile': '个人信息',
+  '/technicians': '账号管理', '/profile': '个人信息',
 }
 const currentPageName = computed(() => pageNames[route.path] || '')
 
-function logout() {
-  store.isLoggedIn = false
-}
+function logout() { store.isLoggedIn = false }
 
-// Notification system
 const showNotifPanel = ref(false)
 const notifs = ref([
   { id: 1, title: '工单 W202603001 已创建', time: '2026-03-28 08:30', type: 'info', read: false },
@@ -164,7 +146,6 @@ const notifs = ref([
 const unreadNotif = computed(() => notifs.value.filter(n => !n.read).length)
 function markAllRead() { notifs.value.forEach(n => n.read = true) }
 
-// Toast system
 const toasts = ref([])
 let toastId = 0
 function showToast(msg, type = 'success') {

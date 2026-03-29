@@ -1,5 +1,19 @@
 <template>
   <div class="space-y-4">
+    <!-- 设备状态统计卡片 -->
+    <div class="grid grid-cols-4 gap-4">
+      <div v-for="s in deviceStats" :key="s.label"
+        class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
+        @click="fStatus = s.filterKey">
+        <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0', s.iconBg]">{{ s.icon }}</div>
+        <div>
+          <div class="text-xl font-bold text-gray-800" style="font-family: monospace">{{ s.value }}</div>
+          <div class="text-xs text-gray-400">{{ s.label }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
     <div class="flex gap-3 items-center flex-wrap">
       <input v-model="kw" type="text" placeholder="🔍 搜索型号/序列号/客户..." class="px-4 py-2 border border-gray-200 rounded-lg text-sm w-60 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <select v-model="fStatus" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -138,6 +152,20 @@ const detail = ref(null)
 const form = ref(null)
 const isEdit = ref(false)
 const delTarget = ref(null)
+
+// 设备状态统计
+const deviceStats = computed(() => {
+  const total = store.devices.length
+  const normal = store.devices.filter(d => d.status === '正常').length
+  const fault = store.devices.filter(d => d.status === '故障').length
+  const repairing = store.devices.filter(d => d.status === '维修中').length
+  return [
+    { icon: '🖨️', iconBg: 'bg-blue-100', label: '全部设备', value: total, filterKey: '' },
+    { icon: '✅', iconBg: 'bg-green-100', label: '正常', value: normal, filterKey: '正常' },
+    { icon: '⚠️', iconBg: 'bg-red-100', label: '故障', value: fault, filterKey: '故障' },
+    { icon: '🔧', iconBg: 'bg-orange-100', label: '维修中', value: repairing, filterKey: '维修中' },
+  ]
+})
 
 const filtered = computed(() => {
   return store.devices.filter(d => {

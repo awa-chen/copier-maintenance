@@ -1,5 +1,18 @@
 <template>
   <div class="space-y-4">
+    <!-- 工单状态统计卡片 -->
+    <div class="grid grid-cols-5 gap-4">
+      <div v-for="s in orderStats" :key="s.label"
+        class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
+        @click="fStatus = s.filterKey">
+        <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0', s.iconBg]">{{ s.icon }}</div>
+        <div>
+          <div class="text-xl font-bold text-gray-800" style="font-family: monospace">{{ s.value }}</div>
+          <div class="text-xs text-gray-400">{{ s.label }}</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toolbar -->
     <div class="flex gap-3 items-center flex-wrap">
       <input v-model="kw" type="text" placeholder="🔍 搜索工单号/标题/客户..." class="px-4 py-2 border border-gray-200 rounded-lg text-sm w-60 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -264,6 +277,23 @@ const form = ref(null)
 const isEdit = ref(false)
 const newLog = ref('')
 const delTarget = ref(null)
+
+// 工单状态统计
+const orderStats = computed(() => {
+  const list = store.isAdmin ? store.orders : store.visibleOrders
+  const total = list.length
+  const pending = list.filter(o => o.status === '待处理').length
+  const processing = list.filter(o => o.status === '处理中').length
+  const awaiting = list.filter(o => o.status === '待验收').length
+  const done = list.filter(o => o.status === '已完成' || o.status === '已关闭').length
+  return [
+    { icon: '📋', iconBg: 'bg-blue-100', label: '全部工单', value: total, filterKey: '' },
+    { icon: '⏳', iconBg: 'bg-red-100', label: '待处理', value: pending, filterKey: '待处理' },
+    { icon: '🔧', iconBg: 'bg-blue-100', label: '处理中', value: processing, filterKey: '处理中' },
+    { icon: '👀', iconBg: 'bg-orange-100', label: '待验收', value: awaiting, filterKey: '待验收' },
+    { icon: '✅', iconBg: 'bg-green-100', label: '已完成', value: done, filterKey: '已完成' },
+  ]
+})
 const partForm = ref(null)
 
 // 配件相关

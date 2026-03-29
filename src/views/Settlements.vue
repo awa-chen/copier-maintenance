@@ -1,5 +1,18 @@
 <template>
   <div class="space-y-4">
+    <!-- 结算状态统计卡片 -->
+    <div class="grid grid-cols-4 gap-4">
+      <div v-for="s in settlementStats" :key="s.label"
+        class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
+        @click="fStatus = s.filterKey">
+        <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0', s.iconBg]">{{ s.icon }}</div>
+        <div>
+          <div class="text-xl font-bold text-gray-800" style="font-family: monospace">{{ s.value }}</div>
+          <div class="text-xs text-gray-400">{{ s.label }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="flex gap-3 items-center flex-wrap">
       <input v-model="kw" type="text" placeholder="搜索客户/合同..." class="px-4 py-2 border border-gray-200 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <select v-model="fStatus" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -237,14 +250,31 @@ const isEdit = ref(false)
 const delTarget = ref(null)
 const detail = ref(null)
 const meterReadings = ref({})
+const settlementStats_version = ref(0) // 触发统计卡片重渲染
 
 const filtered = computed(() => {
+  void settlementStats_version.value // 依赖版本号，触发重渲染
   return store.settlements.filter(s => {
     const matchKw = !kw.value || store.getCustomerName(s.customer).includes(kw.value) || getContractTitle(s.contract).includes(kw.value)
     const matchStatus = !fStatus.value || s.status === fStatus.value
     const matchType = !fType.value || s.type === fType.value
     return matchKw && matchStatus && matchType
   })
+})
+
+// 结算状态统计
+const settlementStats = computed(() => {
+  void settlementStats_version.value // 依赖版本号，触发重渲染
+  const total = store.settlements.length
+  const pending = store.settlements.filter(s => s.status === '待收款').length
+  const confirming = store.settlements.filter(s => s.status === '待确认').length
+  const done = store.settlements.filter(s => s.status === '已结算').length
+  return [
+    { icon: '💰', iconBg: 'bg-blue-100', label: '全部结算', value: total, filterKey: '' },
+    { icon: '⏳', iconBg: 'bg-yellow-100', label: '待收款', value: pending, filterKey: '待收款' },
+    { icon: '👀', iconBg: 'bg-orange-100', label: '待确认', value: confirming, filterKey: '待确认' },
+    { icon: '✅', iconBg: 'bg-green-100', label: '已结算', value: done, filterKey: '已结算' },
+  ]
 })
 
 const pendingSettlements = computed(() => store.settlements.filter(s => s.status === '待收款' || s.status === '待确认'))
@@ -360,7 +390,10 @@ function saveSettleForm() {
     store.addSettlement(data)
     showToast('结算已创建')
   }
+  // 先清空数据触发 computed 重算，再关闭弹窗
   settleForm.value = null
+  // 强制更新 settlementStats 和 filtered
+  settlementStats_version.value++
 }
 
 function confirmPay(s) {

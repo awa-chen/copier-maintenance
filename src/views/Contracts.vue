@@ -1,5 +1,19 @@
 <template>
   <div class="space-y-4">
+    <!-- 合同状态统计卡片 -->
+    <div class="grid grid-cols-4 gap-4">
+      <div v-for="s in contractStats" :key="s.label"
+        class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
+        @click="fStatus = s.filterKey">
+        <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0', s.iconBg]">{{ s.icon }}</div>
+        <div>
+          <div class="text-xl font-bold text-gray-800" style="font-family: monospace">{{ s.value }}</div>
+          <div class="text-xs text-gray-400">{{ s.label }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
     <div class="flex gap-3 items-center flex-wrap">
       <input v-model="kw" type="text" placeholder="搜索合同名称/客户..." class="px-4 py-2 border border-gray-200 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <select v-model="fStatus" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -18,10 +32,17 @@
       </div>
     </div>
 
-    <!-- 合同到期提醒 -->
-    <div v-if="expiringContracts.length > 0" class="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-2">
-      <span class="text-orange-500">⚠️</span>
-      <span class="text-sm text-orange-700">{{ expiringContracts.length }} 份合同即将到期，请及时处理</span>
+    <!-- 合同到期提醒：仅状态为「即将到期」时显示 -->
+    <div v-if="expiringContracts.length > 0" class="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-2">
+      <span class="text-orange-500 mt-0.5">⚠️</span>
+      <div class="flex-1">
+        <span class="text-sm text-orange-700 font-medium">{{ expiringContracts.length }} 份合同即将到期，请及时续签或终止</span>
+        <div class="mt-1 space-y-0.5">
+          <div v-for="c in expiringContracts" :key="c.id" class="text-xs text-orange-600">
+            · {{ c.title }}（到期：{{ c.endDate }}）
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm">
@@ -97,7 +118,7 @@
           <!-- 关联设备列表 -->
           <div class="mb-5">
             <div class="text-xs font-medium text-gray-500 mb-2">关联设备</div>
-            <div v-if="detail.devices?.length > 0" class="space-y-2">
+            <div v-if="contractDevices.length > 0" class="space-y-2">
               <div v-for="d in contractDevices" :key="d.id" class="flex items-center justify-between bg-gray-50 rounded-lg p-2 text-xs">
                 <div>
                   <span class="font-medium">{{ d.model }}</span>
@@ -186,8 +207,8 @@
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">状态</label>
             <select v-model="form.status" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option>生效中</option>
-              <option>即将到期</option>
+              <option value="生效中">生效中（系统自动：到期前30天内→即将到期，过期→已终止）</option>
+              <option value="即将到期">即将到期（需手动设置）</option>
               <option>已完成</option>
               <option>已终止</option>
             </select>
@@ -219,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
@@ -233,6 +254,54 @@ const isEdit = ref(false)
 const delTarget = ref(null)
 const detail = ref(null)
 
+// 页面加载时自动检查合同状态
+onMounted(() => {
+  autoCheckContracts()
+})
+
+// 系统自动判断合同状态（基于到期日期）
+function autoCheckContracts() {
+  const today = new Date()
+  const thirtyDaysLater = new Date()
+  thirtyDaysLater.setDate(today.getDate() + 30)
+
+  let updatedCount = 0
+
+  store.contracts.forEach(c => {
+    if (c.status !== '生效中' && c.status !== '即将到期') return
+    const endDate = new Date(c.endDate)
+    if (endDate < today) {
+      if (c.status !== '已终止') {
+        store.updateContract(c.id, { status: '已终止' })
+        updatedCount++
+      }
+    } else if (endDate <= thirtyDaysLater) {
+      if (c.status === '生效中') {
+        store.updateContract(c.id, { status: '即将到期' })
+        updatedCount++
+      }
+    }
+  })
+
+  if (updatedCount > 0) {
+    showToast(`系统已自动更新 ${updatedCount} 份合同状态`)
+  }
+}
+
+// 合同状态统计
+const contractStats = computed(() => {
+  const total = store.contracts.length
+  const active = store.contracts.filter(c => c.status === '生效中').length
+  const expiring = store.contracts.filter(c => c.status === '即将到期').length
+  const completed = store.contracts.filter(c => c.status === '已完成').length
+  return [
+    { icon: '📄', iconBg: 'bg-blue-100', label: '全部合同', value: total, filterKey: '' },
+    { icon: '✅', iconBg: 'bg-green-100', label: '生效中', value: active, filterKey: '生效中' },
+    { icon: '⏰', iconBg: 'bg-orange-100', label: '即将到期', value: expiring, filterKey: '即将到期' },
+    { icon: '🏁', iconBg: 'bg-gray-100', label: '已完成/已终止', value: completed + store.contracts.filter(c => c.status === '已终止').length, filterKey: '' },
+  ]
+})
+
 const filtered = computed(() => {
   return store.contracts.filter(c => {
     const matchKw = !kw.value || c.title.includes(kw.value) || store.getCustomerName(c.customer).includes(kw.value)
@@ -242,14 +311,9 @@ const filtered = computed(() => {
   })
 })
 
+// 仅显示已手动标记为「即将到期」状态的合同
 const expiringContracts = computed(() => {
-  const thirtyDaysLater = new Date()
-  thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30)
-  return store.contracts.filter(c => {
-    if (c.status !== '生效中') return false
-    const endDate = new Date(c.endDate)
-    return endDate <= thirtyDaysLater
-  })
+  return store.contracts.filter(c => c.status === '即将到期')
 })
 
 const customerDevices = computed(() => {

@@ -1,7 +1,24 @@
 <template>
   <div class="space-y-4">
+    <!-- 巡检状态统计卡片 -->
+    <div class="grid grid-cols-3 gap-4">
+      <div v-for="s in inspStats" :key="s.label"
+        class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
+        @click="fStatus = s.filterKey">
+        <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0', s.iconBg]">{{ s.icon }}</div>
+        <div>
+          <div class="text-xl font-bold text-gray-800" style="font-family: monospace">{{ s.value }}</div>
+          <div class="text-xs text-gray-400">{{ s.label }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="flex gap-3 items-center flex-wrap">
       <input v-model="kw" type="text" placeholder="🔍 搜索设备/客户..." class="px-4 py-2 border border-gray-200 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <select v-model="fStatus" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">全部状态</option>
+        <option>待巡检</option><option>已完成</option>
+      </select>
       <select v-model="fCyc" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <option value="">全部周期</option>
         <option>每日</option><option>每周</option><option>每月</option>
@@ -223,6 +240,7 @@ const store = useAppStore()
 const showToast = inject('showToast')
 
 const kw = ref('')
+const fStatus = ref('')
 const fCyc = ref('')
 const form = ref(null)
 const isEdit = ref(false)
@@ -250,11 +268,25 @@ const defaultDetail = {
   spareToner: 0
 }
 
+// 巡检状态统计
+const inspStats = computed(() => {
+  const list = store.isAdmin ? store.inspections : store.visibleInspections
+  const total = list.length
+  const pending = list.filter(i => i.status === '待巡检').length
+  const done = list.filter(i => i.status === '已完成').length
+  return [
+    { icon: '🔍', iconBg: 'bg-blue-100', label: '全部巡检', value: total, filterKey: '' },
+    { icon: '⏳', iconBg: 'bg-red-100', label: '待巡检', value: pending, filterKey: '待巡检' },
+    { icon: '✅', iconBg: 'bg-green-100', label: '已完成', value: done, filterKey: '已完成' },
+  ]
+})
+
 const filtered = computed(() => {
   return store.inspections.filter(i => {
     const matchKw = !kw.value || store.getDeviceName(i.device).includes(kw.value) || store.getCustomerName(i.customer).includes(kw.value)
+    const matchStatus = !fStatus.value || i.status === fStatus.value
     const matchCyc = !fCyc.value || i.cycle === fCyc.value
-    return matchKw && matchCyc
+    return matchKw && matchStatus && matchCyc
   })
 })
 

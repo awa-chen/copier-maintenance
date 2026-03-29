@@ -183,6 +183,50 @@
       </div>
     </div>
 
+    <!-- 配件消耗排行 -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl p-5 shadow-sm">
+        <h3 class="font-semibold text-gray-700 mb-4">🔩 配件消耗排行</h3>
+        <div class="space-y-3">
+          <div v-for="(p, i) in partsConsumeRank" :key="p.id" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+              :class="i === 0 ? 'bg-yellow-100 text-yellow-600' : i === 1 ? 'bg-gray-100 text-gray-500' : i === 2 ? 'bg-orange-100 text-orange-500' : 'bg-gray-50 text-gray-400'">{{ i + 1 }}</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-700 truncate">{{ p.name }}</div>
+              <div class="text-xs text-gray-400">{{ p.model }}</div>
+            </div>
+            <div class="text-right mr-2">
+              <div class="text-sm font-bold text-orange-600">{{ p.totalQty }}</div>
+              <div class="text-xs text-gray-400">{{ p.unit }}</div>
+            </div>
+            <div class="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-orange-400 rounded-full" :style="{ width: (p.totalQty / maxPartConsume * 100) + '%' }"></div>
+            </div>
+          </div>
+          <div v-if="partsConsumeRank.length === 0" class="text-center py-8 text-gray-400 text-sm">暂无配件消耗数据</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 shadow-sm">
+        <h3 class="font-semibold text-gray-700 mb-4">💵 配件消耗金额排行</h3>
+        <div class="space-y-3">
+          <div v-for="(p, i) in partsAmountRank" :key="p.id" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+              :class="i === 0 ? 'bg-yellow-100 text-yellow-600' : i === 1 ? 'bg-gray-100 text-gray-500' : i === 2 ? 'bg-orange-100 text-orange-500' : 'bg-gray-50 text-gray-400'">{{ i + 1 }}</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-700 truncate">{{ p.name }}</div>
+              <div class="text-xs text-gray-400">{{ p.totalQty }} {{ p.unit }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-bold text-green-600">¥{{ p.totalAmount.toLocaleString() }}</div>
+              <div class="text-xs text-gray-400">消耗金额</div>
+            </div>
+          </div>
+          <div v-if="partsAmountRank.length === 0" class="text-center py-8 text-gray-400 text-sm">暂无配件消耗数据</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 详细数据表格 -->
     <div class="bg-white rounded-xl shadow-sm">
       <div class="p-5 border-b">
@@ -381,6 +425,36 @@ const techWorkloadData = computed(() => {
 })
 
 const maxTechWorkload = computed(() => Math.max(...techWorkloadData.value.map(t => t.total), 1))
+
+// 配件消耗排行（按数量）
+const partsConsumeRank = computed(() => {
+  const y = year.value
+  return store.parts.map(p => {
+    const totalQty = store.partUsages.filter(u => {
+      const d = new Date(u.date)
+      return u.part === p.id && d.getFullYear() === y
+    }).reduce((sum, u) => sum + u.qty, 0)
+    return { id: p.id, name: p.name, model: p.model, unit: p.unit, totalQty }
+  }).filter(p => p.totalQty > 0).sort((a, b) => b.totalQty - a.totalQty).slice(0, 10)
+})
+
+const maxPartConsume = computed(() => Math.max(...partsConsumeRank.value.map(p => p.totalQty), 1))
+
+// 配件消耗排行（按金额）
+const partsAmountRank = computed(() => {
+  const y = year.value
+  return store.parts.map(p => {
+    const totalAmount = store.partUsages.filter(u => {
+      const d = new Date(u.date)
+      return u.part === p.id && d.getFullYear() === y
+    }).reduce((sum, u) => sum + u.price, 0)
+    const totalQty = store.partUsages.filter(u => {
+      const d = new Date(u.date)
+      return u.part === p.id && d.getFullYear() === y
+    }).reduce((sum, u) => sum + u.qty, 0)
+    return { id: p.id, name: p.name, unit: p.unit, totalQty, totalAmount }
+  }).filter(p => p.totalAmount > 0).sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 10)
+})
 
 // 客户排行
 const customerRank = computed(() => {
